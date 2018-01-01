@@ -2,9 +2,9 @@ using AccountingSystem.Contexts;
 using AccountingSystem.Contexts.Interfaces;
 using AccountingSystem.Repositories;
 using AccountingSystem.Repositories.Interfaces;
+using System.Web.Http;
 using System.Web.Mvc;
 using Unity;
-using Unity.Mvc5;
 
 namespace AccountingSystem
 {
@@ -20,7 +20,7 @@ namespace AccountingSystem
             container.RegisterType<IClientRepository, ClientRepository>();
             // e.g. container.RegisterType<ITestService, TestService>();
             
-            DependencyResolver.SetResolver(new UnityDependencyResolver(container));
+            GlobalConfiguration.Configuration.DependencyResolver = new Unity.WebApi.UnityDependencyResolver(container);
         }
     }
 }

@@ -1,22 +1,22 @@
-﻿using AccountingSystem.Contexts.Interfaces;
-using System.Data.SqlClient;
+﻿using System;
 using System.Data;
-using AccountingSystem.Models;
-using System.Collections.Generic;
-using System;
+using System.Data.SqlClient;
 using System.Configuration;
+using System.Collections.Generic;
 using AccountingSystem.Mappers;
+using AccountingSystem.Models;
+using AccountingSystem.Contexts.Interfaces;
 
 namespace AccountingSystem.Contexts
 {
     public class DbContext : IDbContext
     {
-        private const string ClientConst = "GetClient";
+        private const string ClientCardConst = "GetClientCard";
         private const string ClientsConst = "GetClients";
         private const string FilteredClientsConst = "GetFilteredClients";
         private const string TotalAmountConst = "GetTotalAmount";
 
-        private string _connectionString;
+        private readonly string _connectionString;
 
         public DbContext()
         {
@@ -56,7 +56,9 @@ namespace AccountingSystem.Contexts
 
         public Client GetClient(int id)
         {
-            var command = GetCommand(ClientConst);
+            var sqlParameters = new[] { new SqlParameter("@id", id) };
+            var command = GetCommand(ClientCardConst, sqlParameters);
+
             Client client = null;
             var orders = new List<Order>();
 
@@ -70,7 +72,7 @@ namespace AccountingSystem.Contexts
                 {
                     if (client == null)
                     {
-                        client = Mapper.MapToClient(reader);
+                        client = Mapper.MapToClientCard(reader);
                     }
 
                     orders.Add(Mapper.MapToOrder(reader));
@@ -83,15 +85,23 @@ namespace AccountingSystem.Contexts
 
         public decimal GetTotalAmount(int id)
         {
-            decimal totalAmount;
-            var command = GetCommand(TotalAmountConst);
+            SqlParameter resultParameter = new SqlParameter("@TotalAmount", SqlDbType.Decimal)
+            {
+                Direction = ParameterDirection.ReturnValue,
+                Scale = 2,
+                Precision = 18
+            };
 
+            var sqlParameters = new[] { new SqlParameter("@ClientId", id), resultParameter };
+            var command = GetCommand(TotalAmountConst, sqlParameters);
+
+            decimal totalAmount;
             using (var connection = command.Connection)
             {
                 connection.Open();
 
-                var result = command.ExecuteScalar();
-                totalAmount = Convert.ToDecimal(result);
+                command.ExecuteNonQuery();
+                totalAmount = Convert.ToDecimal(resultParameter.Value);
             }
 
             return totalAmount;
@@ -99,7 +109,7 @@ namespace AccountingSystem.Contexts
 
         private SqlCommand GetCommand(string commandText, SqlParameter[] parameters = null)
         {
-            var command = new SqlCommand()
+            var command = new SqlCommand
             {
                 Connection = new SqlConnection(_connectionString),
                 CommandText = commandText,
